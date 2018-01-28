@@ -16,6 +16,7 @@ def quilt_random(sample: str, outsize: int, patchsize: int) -> None:
       texture_region = texture.crop((random_shift, random_shift, patchsize + random_shift, patchsize + random_shift))
       im.paste(texture_region, (i, j, i + patchsize, j + patchsize))
   im.show()
+  im.save('../assets/quilt_random.jpg')
 
 
 if __name__ == '__main__':
