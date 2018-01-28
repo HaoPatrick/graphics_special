@@ -1,1 +1,2 @@
-# graphics_special
+# course code for special topics on computer graphics
+
