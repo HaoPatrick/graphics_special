@@ -6,7 +6,7 @@ import argparse
 
 class SeamFining:
   def __init__(self, sample: str, outsize: int, patchsize: int, overlap: int):
-    self.texture = Image.open(sample)
+    self.texture = Image.open(sample).convert('RGB')
     self.im = Image.new('RGB', size=(outsize, outsize))
     self.patchsize = patchsize
     self.outsize = outsize
@@ -43,10 +43,42 @@ class SeamFining:
         ]) - 1
     return path_array
   
+  def get_patch_by_similarity(self, patch, patch2=None):
+    size = patch.size
+    size_returned = self.patchsize + 2 * self.overlap
+    min_difference = -1
+    min_point = ()
+    for _ in range(3000):
+      j = random.randrange(0, self.texture.size[0] - size_returned)
+      i = random.randrange(0, self.texture.size[1] - size_returned)
+      if patch2 is None:
+        if size[0] < size[1]:
+          test_region = self.texture.crop((j, i + self.overlap, j + self.overlap * 2, i + size_returned))
+        else:
+          test_region = self.texture.crop((j + self.overlap, i, j + size_returned, i + self.overlap * 2))
+        difference = self.patch_difference(test_region, patch)
+      else:
+        test_region = self.texture.crop((j, i, j + size_returned, i + 2 * self.overlap))
+        difference = self.patch_difference(patch, test_region)
+        test_region = self.texture.crop((j, i + self.overlap * 2, j + self.overlap * 2, i + size_returned))
+        difference += self.patch_difference(patch2, test_region)
+      if difference < min_difference or min_difference < 0:
+        min_difference = difference
+        min_point = (j, i)
+    return self.texture.crop((min_point[0], min_point[1], min_point[0] + size_returned, min_point[1] + size_returned))
+  
   def random_texture(self, size):
     i = random.randrange(0, self.texture.size[0] - size)
     j = random.randrange(0, self.texture.size[1] - size)
     return self.texture.crop((i, j, i + size, j + size))
+  
+  @staticmethod
+  def patch_difference(rg1, rg2) -> int:
+    if rg1.size != rg2.size:
+      raise ArithmeticError('region size do not match')
+    
+    difference = ImageChops.difference(rg1.convert('L'), rg2.convert('L'))
+    return sum(difference.getdata())
   
   def find_mask(self, pc1, pc2, horizontal=True):
     difference = ImageChops.difference(pc1, pc2).convert('L')
@@ -90,10 +122,9 @@ class SeamFining:
         elif i == 0:
           region1 = self.im.crop(
             (j - self.overlap, i, j + self.overlap, i + self.overlap + self.patchsize))
-          patch = self.random_texture(self.patchsize + self.overlap * 2)
+          patch = self.get_patch_by_similarity(region1)
           region2 = patch.crop((0, self.overlap, 2 * self.overlap, self.overlap * 2 + self.patchsize))
           merged = self.get_seam_merged(region1, region2)
-          # merged.show()
           self.im.paste(merged, (j - self.overlap, i, j + self.overlap, i + self.patchsize + self.overlap))
           self.im.paste(
             patch.crop(
@@ -102,7 +133,7 @@ class SeamFining:
           )
         elif j == 0:
           region1 = self.im.crop((j, i - self.overlap, j + self.overlap + self.patchsize, i + self.overlap))
-          patch = self.random_texture(self.patchsize + self.overlap * 2)
+          patch = self.get_patch_by_similarity(region1)
           region2 = patch.crop((self.overlap, 0, 2 * self.overlap + self.patchsize, 2 * self.overlap))
           merged = self.get_seam_merged(region1, region2, True)
           self.im.paste(merged, (j, i - self.overlap, j + self.overlap + self.patchsize, i + self.overlap))
@@ -113,15 +144,16 @@ class SeamFining:
             (j, i + self.overlap, j + self.patchsize + self.overlap, i + self.patchsize + self.overlap)
           )
         else:
-          region1 = self.im.crop(
+          region_up = self.im.crop(
             (j - self.overlap, i - self.overlap, j + self.patchsize + self.overlap, i + self.overlap))
-          patch = self.random_texture(self.patchsize + self.overlap * 2)
-          region2 = patch.crop((0, 0, self.overlap * 2 + self.patchsize, self.overlap * 2))
-          merged1 = self.get_seam_merged(region1, region2, True)
-          region1 = self.im.crop(
+          region_left = self.im.crop(
             (j - self.overlap, i + self.overlap, j + self.overlap, i + self.overlap + self.patchsize))
+          patch = self.get_patch_by_similarity(region_up, region_left)
+          region2 = patch.crop((0, 0, self.overlap * 2 + self.patchsize, self.overlap * 2))
+          merged1 = self.get_seam_merged(region_up, region2, True)
+          
           region2 = patch.crop((0, self.overlap * 2, self.overlap * 2, self.overlap * 2 + self.patchsize))
-          merged2 = self.get_seam_merged(region1, region2)
+          merged2 = self.get_seam_merged(region_left, region2)
           self.im.paste(merged1,
                         (j - self.overlap, i - self.overlap, j + self.patchsize + self.overlap, i + self.overlap))
           self.im.paste(merged2,
@@ -130,7 +162,7 @@ class SeamFining:
             (2 * self.overlap, 2 * self.overlap, 2 * self.overlap + self.patchsize, 2 * self.overlap + self.patchsize)),
             (j + self.overlap, i + self.overlap, j + self.overlap + self.patchsize, i + self.overlap + self.patchsize)
           )
-    self.im.show()
+    return self.im
 
 
 if __name__ == '__main__':
@@ -140,4 +172,6 @@ if __name__ == '__main__':
   parser.add_argument('-p', '--patchsize', required=True, type=int, help='patch size')
   args = vars(parser.parse_args())
   quilt_simple = SeamFining(args['file'], args['outsize'], args['patchsize'], int(args['patchsize'] / 12))
-  quilt_simple.find()
+  result = quilt_simple.find()
+  result.save(args['file'][:-4] + '_seam.jpg')
+  result.show()

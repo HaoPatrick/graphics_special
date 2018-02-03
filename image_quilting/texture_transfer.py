@@ -4,6 +4,7 @@ import random
 from functools import wraps
 from time import time
 import numpy as np
+from typing import Tuple
 
 
 def timeit(f):
@@ -29,7 +30,7 @@ class QuiltSimple:
   def patch_difference(self, rg1, rg2) -> int:
     if rg1.size != rg2.size:
       raise ArithmeticError('region size do not match')
-
+    
     difference = ImageChops.difference(rg1.convert('L'), rg2.convert('L'))
     return sum(difference.getdata())
   
@@ -65,7 +66,7 @@ class QuiltSimple:
       (smallest_point[0], smallest_point[1], smallest_point[0] + self.patchsize, smallest_point[1] + self.patchsize)
     )
   
-  def quilt_simple(self) -> None:
+  def quilt_simple(self):
     for j in range(0, self.outsize, self.patchsize):
       for i in range(0, self.outsize, self.patchsize):
         region_up = None if j == 0 else self.im.crop((i - self.overlap, j - self.overlap, i + self.patchsize, j))
@@ -76,15 +77,43 @@ class QuiltSimple:
         self.im.paste(texture_region, (i, j, i + self.patchsize, j + self.patchsize))
         print("==================", i, j)
     return self.im
-    # print(result)
+
+
+class TextureTransfer:
+  def __init__(self, texture: str, target: str, patch_size=60):
+    self.texture_image = Image.open(texture)
+    self.target_image = Image.open(target)
+    self.output_image = Image.new('RGB', size=self.target_image.size)
+    self.patch_size = patch_size
+    self.overlap = self.patch_size / 12
+    self.out_size = self.target_image.size
+  
+  def get_target_patch(self, pos: Tuple[int, int]):
+    return self.target_image.crop((pos[0], pos[1], pos[0] + self.patch_size, pos[1] + self.patch_size))
+  
+  def cost(self, pos: Tuple[int, int], patch2, ):
+    target_patch = self.get_target_patch(pos)
+    
+    pass
+  
+  def synthesize(self):
+    for i in range(0, self.out_size, self.patch_size):
+      for j in range(0, self.out_size, self.patch_size):
+        if i == 0 and j == 0:
+          pass
+        elif i == 0:
+          pass
+        elif j == 0:
+          pass
+        else:
+          pass
 
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description="quilt random function")
-  parser.add_argument('-f', '--file', required=True, type=str, help='path to texture image')
-  parser.add_argument('-o', '--outsize', required=True, type=int, help='output size')
-  parser.add_argument('-p', '--patchsize', required=True, type=int, help='patch size')
+  parser.add_argument('-tx', '--texture', required=True, type=str, help='path to texture image')
+  parser.add_argument('-tr', '--target', required=True, type=str, help='path to target image')
   args = vars(parser.parse_args())
-  quilt_simple = QuiltSimple(args['file'], args['outsize'], args['patchsize'], args['patchsize'] / 3)
-  result = quilt_simple.quilt_simple()
+  tt = TextureTransfer(args['texture'], args['target'])
+  result = tt.quilt_simple()
   result.save(args['file'][:-4] + '_simple.jpg')

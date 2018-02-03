@@ -15,8 +15,7 @@ def quilt_random(sample: str, outsize: int, patchsize: int) -> None:
       random_shift = random.randrange(0, min(texture.size) - patchsize)
       texture_region = texture.crop((random_shift, random_shift, patchsize + random_shift, patchsize + random_shift))
       im.paste(texture_region, (i, j, i + patchsize, j + patchsize))
-  im.show()
-  im.save('../assets/quilt_random.jpg')
+  return im
 
 
 if __name__ == '__main__':
@@ -25,4 +24,5 @@ if __name__ == '__main__':
   parser.add_argument('-o', '--outsize', required=True, type=int, help='output size')
   parser.add_argument('-p', '--patchsize', required=True, type=int, help='patch size')
   args = vars(parser.parse_args())
-  quilt_random(args['file'], args['outsize'], args['patchsize'])
+  result = quilt_random(args['file'], args['outsize'], args['patchsize'])
+  result.save(args['file'][:-4] + '_random.jpg')
