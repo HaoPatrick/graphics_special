@@ -4,7 +4,7 @@ from image_quilting.Quilting import Quilt
 
 
 class TextureTransfer(Quilt):
-  def __init__(self, texture: str, target: str, patch_size=60):
+  def __init__(self, texture: str, target: str, patch_size=30):
     Quilt.__init__(self, texture_path=texture, target_path=target, patch_size=patch_size)
   
   def get_target_patch(self, pos: Tuple[int, int]):
@@ -14,7 +14,7 @@ class TextureTransfer(Quilt):
     min_difference = -1
     min_patch = None
     target_patch = self.get_target_patch(pos)
-    for _ in range(100):
+    for _ in range(1000):
       random_texture = self.get_random_texture_patch()
       difference_on_patches = self.patch_difference(
         target_patch,

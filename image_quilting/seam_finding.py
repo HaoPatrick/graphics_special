@@ -12,7 +12,7 @@ class SeamFining(Quilt):
     size_returned = self.patch_size + 2 * self.overlap
     min_difference = -1
     min_point = ()
-    for _ in range(3000):
+    for _ in range(30):
       j = random.randrange(0, self.texture_image.size[0] - size_returned)
       i = random.randrange(0, self.texture_image.size[1] - size_returned)
       if patch2 is None:
@@ -98,7 +98,7 @@ if __name__ == '__main__':
   parser.add_argument('-o', '--outsize', required=True, type=int, help='output size')
   parser.add_argument('-p', '--patch_size', required=True, type=int, help='patch size')
   args = vars(parser.parse_args())
-  quilt_simple = SeamFining(args['file'], args['outsize'], args['patch_size'])
+  quilt_simple = SeamFining(args['file'], args['outsize'], 120)
   result = quilt_simple.find()
   result.save(args['file'][:-4] + '_seam.jpg')
   result.show()

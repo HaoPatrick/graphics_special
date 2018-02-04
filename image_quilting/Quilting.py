@@ -26,7 +26,7 @@ class Quilt:
     self.output_size = (output_size, output_size) if output_size else self.target_image.size
     self.output_image = Image.new('RGB', size=self.output_size)
     self.patch_size = patch_size if patch_size else 50
-    self.overlap = int(self.patch_size / 12)
+    self.overlap = int(self.patch_size / 3)
     self.full_length = self.patch_size + self.overlap * 2
     self.ALPHA = alpha
   
@@ -87,6 +87,9 @@ class Quilt:
       size = (size[1], size[0])
     
     path_array = self.find_path_matrix(np_array)
+    # temp_array = path_array * 255
+    # temp_array += np_array
+    # Image.fromarray(temp_array).show()
     for i in range(0, size[0]):
       for j in range(0, size[1]):
         if path_array[i][j] == 1:
