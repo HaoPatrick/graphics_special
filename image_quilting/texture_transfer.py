@@ -5,6 +5,7 @@ from functools import wraps
 from time import time
 import numpy as np
 from typing import Tuple
+from image_quilting.Quilting import Quilt
 
 ALPHA = 0.5
 
@@ -21,115 +22,56 @@ def timeit(f):
   return wrapper
 
 
-class TextureTransfer:
+class TextureTransfer(Quilt):
   def __init__(self, texture: str, target: str, patch_size=60):
+    Quilt.__init__(self, texture_path=texture, target_path=target, patch_size=patch_size)
     self.texture_image = Image.open(texture)
     self.target_image = Image.open(target)
     self.output_image = Image.new('RGB', size=self.target_image.size)
     self.patch_size = patch_size
     self.overlap = int(self.patch_size / 12)
-    self.full_size = self.patch_size + self.overlap * 2
+    self.full_length = self.patch_size + self.overlap * 2
     self.out_size = self.target_image.size
   
   def get_target_patch(self, pos: Tuple[int, int]):
     return self.target_image.crop((pos[0], pos[1], pos[0] + self.patch_size, pos[1] + self.patch_size))
   
-  def get_random_patch(self, size=None):
-    if size is None:
-      size = self.patch_size + self.overlap * 2
-    j = random.randrange(0, self.out_size[0] - size)
-    i = random.randrange(0, self.out_size[1] - size)
-    return self.texture_image.crop((j, i, j + size, i + size))
-  
-  @staticmethod
-  def patch_difference(rg1, rg2) -> int:
-    if rg1.size != rg2.size:
-      raise ArithmeticError('region size does not match')
-    
-    difference = ImageChops.difference(rg1.convert('L'), rg2.convert('L'))
-    return sum(difference.getdata())
-  
-  def cost_on_first(self):
-    min_difference = -1
-    min_patch = None
-    target_patch = self.get_target_patch((0, 0))
-    for _ in range(1000):
-      random_texture = self.get_random_patch()
-      difference_on_patches = self.patch_difference(
-        target_patch,
-        random_texture.crop((self.overlap, self.overlap, self.full_size - self.overlap,
-                             self.full_size - self.overlap))
-      )
-      if difference_on_patches < min_difference or min_difference < 0:
-        min_difference = difference_on_patches
-        min_patch = random_texture
-    return min_patch
-  
-  def cost_on_first_row(self, pos: Tuple[int, int], left_reg):
+  def get_patch_by_cost(self, pos: Tuple[int, int], left_region=None, top_region=None):
     min_difference = -1
     min_patch = None
     target_patch = self.get_target_patch(pos)
     for _ in range(1000):
-      random_texture = self.get_random_patch()
+      random_texture = self.get_random_texture_patch()
       difference_on_patches = self.patch_difference(
         target_patch,
-        random_texture.crop((self.overlap, self.overlap, self.full_size - self.overlap,
-                             self.full_size - self.overlap))
+        random_texture.crop((self.overlap, self.overlap, self.full_length - self.overlap,
+                             self.full_length - self.overlap))
       )
-      difference_on_left_region = self.patch_difference(
-        left_reg,
-        random_texture.crop((0, self.overlap, 2 * self.overlap, self.full_size))
-      )
-      total_diff = ALPHA * difference_on_patches + (1 - ALPHA) * difference_on_left_region
+      if left_region and not top_region:
+        difference_on_overlap = self.patch_difference(
+          left_region,
+          random_texture.crop((0, self.overlap, 2 * self.overlap, self.full_length))
+        )
+      elif top_region and not left_region:
+        difference_on_overlap = self.patch_difference(
+          top_region,
+          random_texture.crop((self.overlap, 0, self.full_length, 2 * self.overlap))
+        )
+      elif not top_region and not left_region:
+        difference_on_overlap = 0
+      else:
+        difference_on_overlap = self.patch_difference(
+          top_region,
+          random_texture.crop((0, 0, self.full_length, 2 * self.overlap))
+        )
+        difference_on_overlap += self.patch_difference(
+          left_region,
+          random_texture.crop((0, 2 * self.overlap, 2 * self.overlap, self.full_length))
+        )
+      total_diff = ALPHA * difference_on_patches + (1 - ALPHA) * difference_on_overlap
       if total_diff < min_difference or min_difference < 0:
-        min_patch = random_texture
         min_difference = total_diff
-    return min_patch
-  
-  def cost_on_first_column(self, pos: Tuple[int, int], top_reg):
-    min_difference = -1
-    min_patch = None
-    target_patch = self.get_target_patch(pos)
-    for _ in range(1000):
-      random_texture = self.get_random_patch()
-      difference_on_patches = self.patch_difference(
-        target_patch,
-        random_texture.crop((self.overlap, self.overlap, self.full_size - self.overlap,
-                             self.full_size - self.overlap))
-      )
-      difference_on_left_region = self.patch_difference(
-        top_reg,
-        random_texture.crop((self.overlap, 0, self.full_size, 2 * self.overlap))
-      )
-      total_diff = ALPHA * difference_on_patches + (1 - ALPHA) * difference_on_left_region
-      if total_diff < min_difference or min_difference < 0:
         min_patch = random_texture
-        min_difference = total_diff
-    return min_patch
-  
-  def cost_on_both(self, pos, top_reg, left_reg):
-    min_difference = -1
-    min_patch = None
-    target_patch = self.get_target_patch(pos)
-    for _ in range(100):
-      random_texture = self.get_random_patch()
-      difference_on_patches = self.patch_difference(
-        target_patch,
-        random_texture.crop((self.overlap, self.overlap, self.full_size - self.overlap,
-                             self.full_size - self.overlap))
-      )
-      difference_on_over_lap = self.patch_difference(
-        top_reg,
-        random_texture.crop((0, 0, self.full_size, 2 * self.overlap))
-      )
-      difference_on_over_lap += self.patch_difference(
-        left_reg,
-        random_texture.crop((0, 2 * self.overlap, 2 * self.overlap, self.full_size))
-      )
-      total_diff = ALPHA * difference_on_patches + (1 - ALPHA) * difference_on_over_lap
-      if total_diff < min_difference or min_difference < 0:
-        min_patch = random_texture
-        min_difference = total_diff
     return min_patch
   
   @staticmethod
@@ -198,16 +140,16 @@ class TextureTransfer:
     for i in range(0, self.out_size[1], self.patch_size):
       for j in range(0, self.out_size[0], self.patch_size):
         if i == 0 and j == 0:
-          rv = self.cost_on_first()
+          rv = self.get_patch_by_cost((j, i))
           self.output_image.paste(
-            rv.crop((self.overlap, self.overlap, self.full_size, self.full_size)),
+            rv.crop((self.overlap, self.overlap, self.full_length, self.full_length)),
             (0, 0, self.overlap + self.patch_size, self.overlap + self.patch_size)
           )
         elif i == 0:
           left_region = self.output_image.crop(
             (j - self.overlap, i, j + self.overlap, i + self.overlap + self.patch_size))
-          patch = self.cost_on_first_row((j, i), left_region)
-          region2 = patch.crop((0, self.overlap, 2 * self.overlap, self.full_size))
+          patch = self.get_patch_by_cost((j, i), left_region=left_region)
+          region2 = patch.crop((0, self.overlap, 2 * self.overlap, self.full_length))
           merged = self.get_seam_merged(left_region, region2)
           self.output_image.paste(merged, (j - self.overlap, i, j + self.overlap, i + self.patch_size + self.overlap))
           self.output_image.paste(
@@ -217,7 +159,7 @@ class TextureTransfer:
           )
         elif j == 0:
           region1 = self.output_image.crop((j, i - self.overlap, j + self.overlap + self.patch_size, i + self.overlap))
-          patch = self.cost_on_first_column((j, i), region1)
+          patch = self.get_patch_by_cost((j, i), top_region=region1)
           region2 = patch.crop((self.overlap, 0, 2 * self.overlap + self.patch_size, 2 * self.overlap))
           merged = self.get_seam_merged(region1, region2, True)
           self.output_image.paste(merged, (j, i - self.overlap, j + self.overlap + self.patch_size, i + self.overlap))
@@ -232,7 +174,7 @@ class TextureTransfer:
             (j - self.overlap, i - self.overlap, j + self.patch_size + self.overlap, i + self.overlap))
           region_left = self.output_image.crop(
             (j - self.overlap, i + self.overlap, j + self.overlap, i + self.overlap + self.patch_size))
-          patch = self.cost_on_both((j, i), region_up, region_left)
+          patch = self.get_patch_by_cost((j, i), top_region=region_up, left_region=region_left)
           region2 = patch.crop((0, 0, self.overlap * 2 + self.patch_size, self.overlap * 2))
           merged1 = self.get_seam_merged(region_up, region2, True)
           
@@ -257,6 +199,6 @@ if __name__ == '__main__':
   parser.add_argument('-tx', '--texture', required=True, type=str, help='path to texture image')
   parser.add_argument('-tr', '--target', required=True, type=str, help='path to target image')
   args = vars(parser.parse_args())
-  tt = TextureTransfer(args['texture'], args['target'])
+  tt = TextureTransfer(args['texture'], args['target'], patch_size=30)
   tt.synthesize()
   # result.save(args['file'][:-4] + '_simple.jpg')
