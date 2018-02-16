@@ -102,6 +102,9 @@ ENV/
 
 .idea
 *.jpg
+*.jpeg
+*.JPG
+*.bmp
 *.png
 *.BMP
 # Windows default autosave extension
