@@ -47,12 +47,12 @@ for c = 1:3
                 index_j = [index_j im2var(j+1,i)];
                 value_k = [value_k -1];
             end
-            if mask(j, i-1)
+            if mask(j, i-1)==1
                 index_i = [index_i e];
                 index_j = [index_j im2var(j,i-1)];
                 value_k = [value_k -1];
             end
-            if mask(j, i+1)
+            if mask(j, i+1)==1
                 index_i = [index_i e];
                 index_j = [index_j im2var(j,i+1)];
                 value_k = [value_k -1];
