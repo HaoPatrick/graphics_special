@@ -2,7 +2,7 @@ from scipy.spatial import Delaunay
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List, Tuple, Dict
+import argparse
 import json
 
 
@@ -43,7 +43,11 @@ class PointDelaunay:
 
 
 if __name__ == '__main__':
-  points1 = json.load(open('../assets/justin_700_800_bck.json'))
-  points2 = json.load(open('../assets/selfie_700_800_bck.json'))
+  parser = argparse.ArgumentParser(description="compute and draw triangle on photos")
+  parser.add_argument('-i1', '--image_one', required=True, type=str, help='path to first image config')
+  parser.add_argument('-i2', '--image_two', required=True, type=str, help='path to second image config')
+  args = vars(parser.parse_args())
+  points1 = json.load(open(args['image_one']))
+  points2 = json.load(open(args['image_two']))
   point_delaunay = PointDelaunay(points1, points2)
   point_delaunay.draw_tri()
