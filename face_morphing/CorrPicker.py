@@ -19,6 +19,10 @@ class CorrPicker:
   def pick(self):
     plt.imshow(self.img)
     x = plt.ginput(n=-1, timeout=-1)
+    x.append([0, 0])
+    x.append([0, self.img.size[1] - 1])
+    x.append([self.img.size[0] - 1, 0])
+    x.append([self.img.size[0] - 1, self.img.size[1] - 1])
     self._serialize(x)
 
   def _serialize(self, points: List[Tuple[int, int]]):

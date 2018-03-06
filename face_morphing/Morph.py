@@ -11,8 +11,8 @@ class Morph:
   def __init__(self, im_one: dict, im_two: dict):
     self.im1 = plt.imread(im_one['path'])[..., :3] / 255.
     self.im2 = plt.imread(im_two['path'])[..., :3] / 255.
-    self.im1_pts = np.array([[x['x'], x['y']] for x in im_one['points']])
-    self.im2_pts = np.array([[x['x'], x['y']] for x in im_two['points']])
+    self.im1_pts = np.array([[x['y'], x['x']] for x in im_one['points']])
+    self.im2_pts = np.array([[x['y'], x['x']] for x in im_two['points']])
     self.output = np.empty(self.im1.shape)
     self.triangles = PointDelaunay.delaunay((self.im1_pts + self.im2_pts) / 2)
 
@@ -58,8 +58,9 @@ if __name__ == '__main__':
   points1 = json.load(open(args['image_one']))
   points2 = json.load(open(args['image_two']))
   morph = Morph(points2, points1)
-  for i in range(0, 9):
-    morph.morph(i / 8, i / 8)
-    morph.save('../assets/morph/morph-a-{:02d}.jpg'.format(i))
+  iteration = 46
+  for i in range(1, iteration):
+    morph.morph(i / (iteration - 1), i / (iteration - 1))
+    morph.save('../assets/morph/morph-final-{:02d}.jpg'.format(i))
   # morph.morph(1, 1)
   # morph.display()
