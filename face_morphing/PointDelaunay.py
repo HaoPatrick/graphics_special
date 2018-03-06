@@ -14,30 +14,28 @@ import json
 # plt.show()
 
 class PointDelaunay:
-  def __init__(self, points_config: dict):
-    self.filename = points_config['filename']
-    self.path = points_config['path']
-    self.points: List[Dict[str, float]] = points_config['points']
+  def __init__(self, image_one: dict, image_two: dict):
+    self.im1 = image_one
+    self.im2 = image_two
 
   @staticmethod
   def delaunay(d_points: np.ndarray):
     return Delaunay(d_points)
 
-  @staticmethod
-  def draw_tri(image_one: dict, image_two: dict):
-    np_points1 = np.array([[x['x'], x['y']] for x in image_one['points']])
-    np_points2 = np.array([[x['x'], x['y']] for x in image_two['points']])
+  def draw_tri(self):
+    np_points1 = np.array([[x['x'], x['y']] for x in self.im1['points']])
+    np_points2 = np.array([[x['x'], x['y']] for x in self.im2['points']])
 
-    tri = PointDelaunay.delaunay(np_points1)
+    tri = PointDelaunay.delaunay((np_points1 + np_points2) / 2)
 
     plt.subplot(121)
-    img = Image.open(image_one['path'])
+    img = Image.open(self.im1['path'])
     plt.imshow(img)
     plt.triplot(np_points1[:, 0], np_points1[:, 1], tri.simplices.copy(), linewidth=1)
     plt.plot(np_points1[:, 0], np_points1[:, 1], 'o', markersize=2)
 
     plt.subplot(122)
-    img2 = Image.open(image_two['path'])
+    img2 = Image.open(self.im2['path'])
     plt.imshow(img2)
     plt.triplot(np_points2[:, 0], np_points2[:, 1], tri.simplices.copy(), linewidth=1)
     plt.plot(np_points2[:, 0], np_points2[:, 1], 'o', markersize=2)
@@ -47,4 +45,5 @@ class PointDelaunay:
 if __name__ == '__main__':
   points1 = json.load(open('../assets/justin_700_800_bck.json'))
   points2 = json.load(open('../assets/selfie_700_800_bck.json'))
-  PointDelaunay.draw_tri(points1, points2)
+  point_delaunay = PointDelaunay(points1, points2)
+  point_delaunay.draw_tri()
