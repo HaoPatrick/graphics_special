@@ -9,27 +9,27 @@ import argparse
 
 class CorrPicker:
   NUM_POINTS = 42
-  
+
   def __init__(self, image_path: str, output=None):
     self.image_path = os.path.abspath(image_path)
     self.image_dir, self.image_name = os.path.split(self.image_path)
     self.output_path: str = output if output else f"{self.image_dir}/{self.image_name.split('.')[0]}.json"
     self.img = Image.open(self.image_path)
-  
+
   def pick(self):
     plt.imshow(self.img)
     x = plt.ginput(n=-1, timeout=-1)
     self._serialize(x)
-  
+
   def _serialize(self, points: List[Tuple[int, int]]):
-    result_dict = {}
-    result_dict['path'] = self.image_path
-    result_dict['filename'] = self.image_name
-    result_dict['points'] = [{'x': x[0], 'y': x[1]} for x in points]
+    result_dict = {'path': self.image_path,
+                   'filename': self.image_name,
+                   'points': [{'x': x[0], 'y': x[1]} for x in points]
+                   }
     result_json = json.dumps(result_dict)
     with open(self.output_path, 'w') as f:
       f.write(result_json)
-  
+
   def show(self):
     plt.imshow(self.img)
     plt.show()
