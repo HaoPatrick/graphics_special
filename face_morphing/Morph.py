@@ -61,6 +61,6 @@ if __name__ == '__main__':
   iteration = 46
   for i in range(1, iteration):
     morph.morph(i / (iteration - 1), i / (iteration - 1))
-    morph.save('../assets/morph/morph-final-{:02d}.jpg'.format(i))
+    morph.save('../assets/morph/morph-mean-ptk-{:02d}.jpg'.format(i))
   # morph.morph(1, 1)
   # morph.display()

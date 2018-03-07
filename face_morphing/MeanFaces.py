@@ -4,14 +4,16 @@ from face_morphing.PointDelaunay import PointDelaunay
 from face_morphing.Morph import Morph
 from typing import List
 import skimage.draw
+import os
+import json
 
 
 class Face:
   ASSETS_BASE = '../assets'
-  IMAGE_DIR = ASSETS_BASE + '/face_images'
+  IMAGE_DIR = ASSETS_BASE + '/face_images/man'
   POINTS_DIR = ASSETS_BASE + '/face_points'
 
-  def __init__(self, face_index: str, argument_pts=False):
+  def __init__(self, face_index: str, argument_pts=True):
     self.im_path = f'{self.IMAGE_DIR}/{face_index}.jpg'
     self.pts_path = f'{self.POINTS_DIR}/{face_index}.pts'
     self.im = plt.imread(self.im_path)
@@ -31,7 +33,7 @@ class Face:
   def _generate_argument_pts(self):
     width, height = self.im.shape
     return np.array([[0, 0], [0, width - 1], [height - 1, 0], [height - 1, width - 1],
-                     [height / 2, 0], [height / 2, width - 1], [height, width / 2], [0, width / 2]])
+                     [height / 2, 0], [height / 2, width - 1], [height - 1, width / 2], [0, width / 2]])
 
   def show(self):
     tri = PointDelaunay.delaunay(self.pts)
@@ -40,19 +42,31 @@ class Face:
     plt.plot(self.pts[:, 0], self.pts[:, 1], 'o', markersize=2)
     plt.show()
 
+  def save(self):
+    plt.imsave(os.path.abspath(self.im_path), self.im, cmap='gray')
+    out_dir, filename = os.path.split(self.im_path)
+    result_dict = {'path': os.path.abspath(self.im_path),
+                   'filename': filename,
+                   'points': [{'x': x[0], 'y': x[1]} for x in self.pts.tolist()]
+                   }
+    result_json = json.dumps(result_dict)
+    with open(f"{out_dir}/{filename.split('.')[0]}.json", 'w') as f:
+      f.write(result_json)
+
 
 class MeanFace:
 
-  def __init__(self, face_count=50, face_type='a'):
-    self.COUNT = face_count
+  def __init__(self, face_type='a'):
     self.TYPE = face_type
     self.all_faces = self._load_all_faces()
+    self.COUNT = len(self.all_faces)
     self.mean_pts = self._get_mean_point()
     self.output = np.empty(self.all_faces[0].im.shape)
     self.mean_tri = PointDelaunay.delaunay(self.mean_pts)
 
   def _load_all_faces(self) -> List[Face]:
-    return [Face(f'{i+1}{self.TYPE}', True) for i in range(self.COUNT)]
+    all_files = os.listdir('../assets/face_images/man')
+    return [Face(i.split('.')[0], True) for i in all_files if self.TYPE in i]
 
   def _get_mean_point(self) -> np.ndarray:
     return sum([x.pts for x in self.all_faces]) / len(self.all_faces)
@@ -65,7 +79,15 @@ class MeanFace:
     plt.show()
 
   def save(self, path: str):
-    plt.imsave(path, self.output, cmap='gray')
+    plt.imsave(os.path.abspath(path), self.output, cmap='gray')
+    out_dir, filename = os.path.split(path)
+    result_dict = {'path': os.path.abspath(path),
+                   'filename': filename,
+                   'points': [{'x': x[0], 'y': x[1]} for x in self.mean_pts.tolist()]
+                   }
+    result_json = json.dumps(result_dict)
+    with open(f"{out_dir}/{filename.split('.')[0]}.json", 'w') as f:
+      f.write(result_json)
 
   def _get_one_to_mean_faces(self, face_index: int):
     dissolve_ratio = 1
@@ -88,7 +110,9 @@ class MeanFace:
 
 
 if __name__ == '__main__':
-  count, faces_type = 50, 'b'
-  mean_face = MeanFace(count, faces_type)
-  mean_face.calculate_face()
-  mean_face.save(f'../assets/mean/mean-{count}{faces_type}.jpg')
+  # faces_type = 'a'
+  # mean_face = MeanFace(faces_type)
+  # mean_face.calculate_face()
+  # mean_face.save(f'../assets/mean/mean-man-{faces_type}.jpg')
+  face = Face('1a')
+  face.show()
